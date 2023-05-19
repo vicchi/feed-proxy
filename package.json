@@ -1,0 +1,17 @@
+{
+  "name": "feed-proxy",
+  "version": "1.0.0",
+  "description": "The vicchi.org Feed Proxy API",
+  "main": "index.js",
+  "repository": "https://github.com/vicchi/feed-proxy",
+  "author": "Gary Gale <gary@vicchi.org>",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "scripts": {
+    "install": "cp -R $(find node_modules/heroicons/ -maxdepth 1 -mindepth 1 -type d) ./data-stores/static/heroicons/ && cp -R node_modules/@bybas/weather-icons/production/* ./data-stores/static/weather-icons/"
+  },
+  "dependencies": {
+    "@bybas/weather-icons": "^2.0.0",
+    "heroicons": "^2.0.18"
+  }
+}
