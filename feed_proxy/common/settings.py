@@ -53,6 +53,10 @@ class Settings(BaseSettings):
 
     coverart_api_url: HttpUrl
 
+    openmeteo_api_url: HttpUrl
+    default_lng: float
+    default_lat: float
+
     cache_expiration: int
     cache_path: Path
     static_path: Path
