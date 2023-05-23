@@ -28,4 +28,4 @@ COPY ./VERSION /service/VERSION
 EXPOSE 80
 
 HEALTHCHECK CMD curl --fail http://localhost:80/ping || exit 1
-CMD ["gunicorn", "refdata_api.server:api", "--bind", "0.0.0.0:80"]
+CMD ["gunicorn", "feed_proxy.server:api", "--bind", "0.0.0.0:80"]
