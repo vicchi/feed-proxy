@@ -21,7 +21,7 @@ async def home_page(_request: Request) -> HTMLResponse:
     Main landing page hander
     """
 
-    url = f'{settings.foursq_base_url}{settings.foursq_authorize_url}?response_type=code&client_id={settings.foursq_client_id}&redirect_uri={settings.foursq_redirect_url}'
+    url = f'{settings.foursq_base_url}{settings.foursq_authorize_url}?response_type=code&client_id={settings.foursq_client_id}&redirect_uri={settings.foursq_redirect_url}'    # pylint: disable=line-too-long
     body = f"""
     <html>
     <title>Get your Foursquare OAuth token</title>

@@ -20,7 +20,7 @@ async def home_page(_request: Request) -> HTMLResponse:
     Main landing page hander
     """
 
-    url = f'{settings.trakt_base_url}{settings.trakt_authorize_url}?response_type=code&client_id={settings.trakt_client_id}&redirect_uri={settings.trakt_redirect_url}'
+    url = f'{settings.trakt_base_url}{settings.trakt_authorize_url}?response_type=code&client_id={settings.trakt_client_id}&redirect_uri={settings.trakt_redirect_url}'    # pylint: disable=line-too-long
     body = f"""
     <html>
     <title>Get your Trakt OAuth token</title>
