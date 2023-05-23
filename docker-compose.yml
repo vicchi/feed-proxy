@@ -8,11 +8,11 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.http.routers.vicchi-org.rule=Host(`${SITE_HOST:?Site host not defined}`)
-      - traefik.http.routers.vicchi-org.entrypoints=websecure
-      - traefik.http.routers.vicchi-org.tls.certresolver=reverse-proxy-http
-      - traefik.http.routers.vicchi-org.tls.options=proxy-default@file
-      - traefik.http.routers.vicchi-org.middlewares=secHeaders@file
+      - traefik.http.routers.feed-proxy.rule=Host(`${SITE_HOST:?Site host not defined}`)
+      - traefik.http.routers.feed-proxy.entrypoints=websecure
+      - traefik.http.routers.feed-proxy.tls.certresolver=reverse-proxy-http
+      - traefik.http.routers.feed-proxy.tls.options=proxy-default@file
+      - traefik.http.routers.feed-proxy.middlewares=secHeaders@file
     volumes:
       - ./.env:/service/.env
       - ./gunicorn.conf.py:/service/gunicorn.conf.py
