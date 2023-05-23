@@ -4,6 +4,7 @@ __pycache__/
 node_modules/
 run/
 data-stores/cache/**
+data-stores/static/statuslog.json
 data-stores/static/heroicons/**
 data-stores/static/weather-icons/**
 !data-stores/cache/.gitkeep
