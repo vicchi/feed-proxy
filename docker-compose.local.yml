@@ -1,0 +1,13 @@
+services:
+  feed-proxy:
+    extends:
+      file: docker-compose.yml
+      service: feed-proxy
+    ports:
+      - 8000:80
+    labels:
+      - traefik.enable=false
+      
+networks:
+  vicchi-backend:
+    external: true
