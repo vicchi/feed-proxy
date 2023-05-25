@@ -11,14 +11,20 @@ from fastapi.responses import JSONResponse
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
-from feed_proxy.dependencies.cache import TIMEOUT, SessionCaches
+from feed_proxy.dependencies.cache import SessionCaches, TIMEOUT
 
 
-def current_music(request: Request, count: int, sessions: SessionCaches) -> JSONResponse:
+def current_music(
+    request: Request,
+    count: int,
+    sessions: SessionCaches,
+    preload: bool = False
+) -> JSONResponse:
     """
     Get current music listening from ListenBrainz/MusicBrainz/Discogs
     """
 
+    settings = get_settings()
     listening = {
         'tracks': [],
         'artists': [],
@@ -31,22 +37,35 @@ def current_music(request: Request, count: int, sessions: SessionCaches) -> JSON
             if 'track_metadata' in track:
                 meta = track['track_metadata']
                 image_url = None
-                if 'mbid_mapping' in meta and 'caa_release_mbid' in meta['mbid_mapping']:
-                    caa_mbid = meta['mbid_mapping']['caa_release_mbid']
-                    image_url = coverart_image(mbid=caa_mbid, request=request, sessions=sessions)
+                track_url = None
+                if 'mbid_mapping' in meta:
+                    if 'caa_release_mbid' in meta['mbid_mapping']:
+                        caa_mbid = meta['mbid_mapping']['caa_release_mbid']
+                        image_url = coverart_image(
+                            mbid=caa_mbid,
+                            request=request,
+                            sessions=sessions,
+                            preload=preload
+                        )
+                    if 'release_mbid' in meta['mbid_mapping']:
+                        track_url = f"{settings.musicbrainz_url}/release/{meta['mbid_mapping']['release_mbid']}"
 
                 if image_url:
                     image = str(image_url)
                 else:
-                    image = str(
-                        request.url_for('static',
-                                        path='/heroicons/24/solid/musical-note.svg')
-                    )
+                    if preload:
+                        image = None
+                    else:
+                        image = str(
+                            request.url_for('static',
+                                            path='/heroicons/24/solid/musical-note.svg')
+                        )
 
                 listening['tracks'].append(
                     {
                         'artist': meta['artist_name'],
                         'track': meta['track_name'],
+                        'url': track_url,
                         'image': image
                     }
                 )
@@ -80,7 +99,8 @@ def current_music(request: Request, count: int, sessions: SessionCaches) -> JSON
                 {
                     'name': artist['artist_name'],
                     'count': artist['listen_count'],
-                    'image': image
+                    'image': image,
+                    'url': f"{settings.musicbrainz_url}/artist/{artist['artist_mbid']}"
                 }
             )
 
@@ -93,23 +113,27 @@ def current_music(request: Request, count: int, sessions: SessionCaches) -> JSON
                     mbid=caa_mbid,
                     request=request,
                     sessions=sessions,
-                    metadata='release-group'
+                    metadata='release-group',
+                    preload=preload
                 )
 
                 if image_url:
                     image = str(image_url)
                 else:
-                    image = str(
-                        request.url_for('static',
-                                        path='/heroicons/24/solid/musical-note.svg')
-                    )
+                    if preload:
+                        image = None
+                    else:
+                        image = str(
+                            request.url_for('static',
+                                            path='/heroicons/24/solid/musical-note.svg')
+                        )
 
                 listening['releases'].append(
                     {
                         'artist': release['artist_name'],
                         'release': release['release_group_name'],
                         'image': image,
-                        'caa_mbid': caa_mbid
+                        'url': f"{settings.musicbrainz_url}/release-group/{release['release_group_mbid']}"
                     }
                 )
 
@@ -117,7 +141,7 @@ def current_music(request: Request, count: int, sessions: SessionCaches) -> JSON
         'listening': listening
     }
 
-    return JSONResponse(status_code=HTTPStatus.OK, content=content)
+    return JSONResponse(status_code=HTTPStatus.OK.value, content=content)
 
 
 def discogs_artist_image(discogsid: str, request: Request, sessions: SessionCaches) -> URL:
@@ -247,6 +271,7 @@ def coverart_image(
     mbid: str,
     request: Request,
     sessions: SessionCaches,
+    preload: bool,
     metadata: str = 'release',
 ) -> URL:
     """
@@ -262,7 +287,9 @@ def coverart_image(
         image_url = None
         if 'images' in body:
             for image in body['images']:
-                if image['front']:
+                if image['front'] or (
+                    not image['front'] and not image['back'] and image['approved']
+                ):
                     if 'thumbnails' in image and 'small' in image['thumbnails']:
                         image_url = image['thumbnails']['small']
                         break
@@ -274,7 +301,10 @@ def coverart_image(
         if image_url:
             image_url = URL(image_url).replace(scheme='https')
         else:
-            image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
+            if preload:
+                image_url = None
+            else:
+                image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
 
         return image_url
 

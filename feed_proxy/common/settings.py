@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     site_host: str
     site_url: HttpUrl
     site_contact: EmailStr
+    preload_cache: bool
+    environment: str
 
     trakt_base_url: HttpUrl
     trakt_authorize_url: str
@@ -63,6 +65,7 @@ class Settings(BaseSettings):
     discogs_consumer_key: str
     discogs_consumer_secret: str
 
+    musicbrainz_url: HttpUrl
     musicbrainz_api_url: HttpUrl
 
     default_lng: float

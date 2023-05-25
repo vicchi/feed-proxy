@@ -172,4 +172,4 @@ def current_weather(
         'descr': WEATHER_CODES[code]['descr']
     }
 
-    return JSONResponse(status_code=200, content=content)
+    return JSONResponse(status_code=HTTPStatus.OK.value, content=content)
