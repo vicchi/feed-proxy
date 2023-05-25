@@ -5,13 +5,17 @@ Feed Proxy API: common package; .env settings module
 from pathlib import Path
 
 import dotenv
-from pydantic import AnyHttpUrl, BaseSettings, HttpUrl
+from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl
 
 
 class Settings(BaseSettings):
     """
     Feed Proxy API .env settings
     """
+
+    site_host: str
+    site_url: HttpUrl
+    site_contact: EmailStr
 
     trakt_base_url: HttpUrl
     trakt_authorize_url: str
@@ -54,11 +58,25 @@ class Settings(BaseSettings):
     coverart_api_url: HttpUrl
 
     openmeteo_api_url: HttpUrl
+
+    discogs_api_url: HttpUrl
+    discogs_consumer_key: str
+    discogs_consumer_secret: str
+
+    musicbrainz_api_url: HttpUrl
+
     default_lng: float
     default_lat: float
 
-    cache_expiration: int
     cache_path: Path
+    cache_listens_expiry: str
+    cache_listens: Path
+    cache_stats_expiry: str
+    cache_stats: Path
+    cache_images_expiry: str
+    cache_images: Path
+    cache_artists_expiry: str
+    cache_artists: Path
     static_path: Path
 
     feed_api_version: str
