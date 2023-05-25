@@ -24,6 +24,7 @@ class SessionCaches:
     stats: CachedSession = None
     images: CachedSession = None
     artists: CachedSession = None
+    weather: CachedSession = None
 
 
 TIMEOUT = 10
@@ -83,6 +84,18 @@ caches.artists = CachedSession(
     headers=DEFAULT_HEADERS
 )
 caches.artists.mount('https://', HTTPAdapter(max_retries=retries))
+
+caches.weather = CachedSession(
+    settings.cache_weather,
+    backend=SQLiteCache(db_path=settings.cache_weather.absolute()),
+    urls_expire_after={
+        '*': datetime.timedelta(
+            seconds=humanfriendly.parse_timespan(settings.cache_weather_expiry)
+        )
+    },
+    headers=DEFAULT_HEADERS
+)
+caches.weather.mount('https://', HTTPAdapter(max_retries=retries))
 
 
 def sessions() -> SessionCaches:

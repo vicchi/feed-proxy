@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     cache_images: Path
     cache_artists_expiry: str
     cache_artists: Path
+
+    cache_weather_expiry: str
+    cache_weather: Path
+
     static_path: Path
 
     feed_api_version: str
