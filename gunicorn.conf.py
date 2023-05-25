@@ -10,6 +10,7 @@ daemon = False
 pidfile = 'run/api.pid'
 umask = 0o644
 worker_tmp_dir = '/dev/shm'
+forwarded_allow_ips = '*'
 
 # Worker Processes: https://docs.gunicorn.org/en/latest/settings.html#worker-processes
 workers = multiprocessing.cpu_count() * 2 + 1
