@@ -7,6 +7,10 @@ from pathlib import Path
 import dotenv
 from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl
 
+DEFAULT_TIMEOUT = 10
+DEFAULT_RETRIES = 5
+DEFAULT_BACKOFF = 0.1
+
 
 class Settings(BaseSettings):
     """
@@ -70,6 +74,10 @@ class Settings(BaseSettings):
 
     default_lng: float
     default_lat: float
+
+    api_timeout: int = DEFAULT_TIMEOUT
+    api_retries: int = DEFAULT_RETRIES
+    api_backoff: float = DEFAULT_BACKOFF
 
     cache_path: Path
     cache_listens_expiry: str

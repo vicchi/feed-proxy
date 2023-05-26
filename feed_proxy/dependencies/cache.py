@@ -27,9 +27,6 @@ class SessionCaches:
     weather: CachedSession = None
 
 
-TIMEOUT = 10
-RETRIES = 5
-BACKOFF = 0.1
 STATUSES = [500, 502, 503, 504]
 
 DEFAULT_HEADERS = {
@@ -38,7 +35,11 @@ DEFAULT_HEADERS = {
 }
 
 settings = get_settings()
-retries = Retry(total=RETRIES, backoff_factor=BACKOFF, status_forcelist=STATUSES)
+retries = Retry(
+    total=settings.api_retries,
+    backoff_factor=settings.api_backoff,
+    status_forcelist=STATUSES
+)
 caches = SessionCaches()
 
 caches.listens = CachedSession(

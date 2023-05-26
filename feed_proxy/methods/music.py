@@ -3,6 +3,7 @@ Feed Proxy API: methods package; music module
 """
 
 from http import HTTPStatus
+import logging
 import os
 
 from fastapi import Request
@@ -11,7 +12,9 @@ from fastapi.responses import JSONResponse
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
-from feed_proxy.dependencies.cache import SessionCaches, TIMEOUT
+from feed_proxy.dependencies.cache import SessionCaches
+
+logger = logging.getLogger('gunicorn.error')
 
 
 def current_music(
@@ -156,7 +159,9 @@ def discogs_artist_image(discogsid: str, request: Request, sessions: SessionCach
     }
     url = f'{settings.discogs_api_url}/artists/{discogsid}'
 
-    rsp = sessions.images.get(url=url, headers=headers, timeout=TIMEOUT)
+    rsp = sessions.images.get(url=url, headers=headers, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
+
     if rsp.status_code == HTTPStatus.OK:
         body = rsp.json()
         image_url = None
@@ -195,7 +200,8 @@ def listenbrainz_artist_stats(sessions: SessionCaches, count: int, period: str =
         'range': period
     }
     url = f'{settings.listenbrainz_api_url}/stats/user/{settings.listenbrainz_api_user}/artists'
-    rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=TIMEOUT)
+    rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
 
     if rsp.status_code == HTTPStatus.OK:
         return rsp.json()
@@ -216,7 +222,13 @@ def listenbrainz_listens(sessions: SessionCaches, count: int) -> dict:
         'count': count
     }
     url = f'{settings.listenbrainz_api_url}/user/{settings.listenbrainz_api_user}/listens'
-    rsp = sessions.listens.get(url=url, headers=headers, params=params, timeout=TIMEOUT)
+    rsp = sessions.listens.get(
+        url=url,
+        headers=headers,
+        params=params,
+        timeout=settings.api_timeout
+    )
+    logger.debug('%s: %s', url, rsp.status_code)
 
     if rsp.status_code == HTTPStatus.OK:
         return rsp.json()
@@ -238,7 +250,9 @@ def listenbrainz_release_stats(sessions: SessionCaches, count: int, period: str 
         'range': period
     }
     url = f'{settings.listenbrainz_api_url}/stats/user/{settings.listenbrainz_api_user}/release-groups'
-    rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=TIMEOUT)
+    rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
+
     if rsp.status_code == HTTPStatus.OK:
         return rsp.json()
 
@@ -259,7 +273,8 @@ def musicbrainz_artist(
         'inc': 'url-rels'
     }
     url = f'{settings.musicbrainz_api_url}/artist/{mbid}'
-    rsp = sessions.artists.get(url=url, params=params, timeout=TIMEOUT)
+    rsp = sessions.artists.get(url=url, params=params, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
 
     if rsp.status_code == HTTPStatus.OK:
         return rsp.json()
@@ -280,7 +295,8 @@ def coverart_image(
 
     settings = get_settings()
     url = f'{settings.coverart_api_url}/{metadata}/{mbid}'
-    rsp = sessions.images.get(url=url, timeout=TIMEOUT)
+    rsp = sessions.images.get(url=url, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
 
     if rsp.status_code == HTTPStatus.OK:
         body = rsp.json()
