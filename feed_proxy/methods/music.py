@@ -8,11 +8,11 @@ import os
 
 from fastapi import Request
 from fastapi.exceptions import HTTPException
-from fastapi.responses import JSONResponse
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches, signed_cdn_url
+from feed_proxy.models.responses import Artist, CurrentMusic, Release, Track
 
 logger = logging.getLogger('gunicorn.error')
 
@@ -22,17 +22,13 @@ def current_music(
     count: int,
     sessions: SessionCaches,
     preload: bool = False
-) -> JSONResponse:
+) -> CurrentMusic:
     """
     Get current music listening from ListenBrainz/MusicBrainz/Discogs
     """
 
     settings = get_settings()
-    listening = {
-        'tracks': [],
-        'artists': [],
-        'releases': []
-    }
+    listening = CurrentMusic()
 
     listens = listenbrainz_listens(sessions, count)
     if 'payload' in listens and 'listens' in listens['payload']:
@@ -64,13 +60,13 @@ def current_music(
                                             path='/heroicons/24/solid/musical-note.svg')
                         )
 
-                listening['tracks'].append(
-                    {
-                        'artist': meta['artist_name'],
-                        'track': meta['track_name'],
-                        'url': track_url,
-                        'image': image
-                    }
+                listening.tracks.append(
+                    Track(
+                        artist=meta['artist_name'],
+                        track=meta['track_name'],
+                        url=track_url,
+                        image=image
+                    )
                 )
 
     artists = listenbrainz_artist_stats(sessions, count)
@@ -98,13 +94,13 @@ def current_music(
             else:
                 image = str(request.url_for('static', path='/heroicons/24/solid/musical-note.svg'))
 
-            listening['artists'].append(
-                {
-                    'name': artist['artist_name'],
-                    'count': artist['listen_count'],
-                    'image': image,
-                    'url': f"{settings.musicbrainz_url}/artist/{artist['artist_mbid']}"
-                }
+            listening.artists.append(
+                Artist(
+                    name=artist['artist_name'],
+                    count=artist['listen_count'],
+                    url=track_url,
+                    image=image
+                )
             )
 
     releases = listenbrainz_release_stats(sessions, count)
@@ -131,20 +127,16 @@ def current_music(
                                             path='/heroicons/24/solid/musical-note.svg')
                         )
 
-                listening['releases'].append(
-                    {
-                        'artist': release['artist_name'],
-                        'release': release['release_group_name'],
-                        'image': image,
-                        'url': f"{settings.musicbrainz_url}/release-group/{release['release_group_mbid']}"
-                    }
+                listening.releases.append(
+                    Release(
+                        artist=release['artist_name'],
+                        release=release['release_group_name'],
+                        url=track_url,
+                        image=image
+                    )
                 )
 
-    content = {
-        'listening': listening
-    }
-
-    return JSONResponse(status_code=HTTPStatus.OK.value, content=content)
+    return listening
 
 
 def discogs_artist_image(discogsid: str, request: Request, sessions: SessionCaches) -> URL:

@@ -11,6 +11,7 @@ from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches, sessions as caches
 from feed_proxy.methods.music import current_music
 from feed_proxy.methods.weather import current_weather
+from feed_proxy.models.responses import CurrentMusic
 
 STATUSLOG_JSON = 'statuslog.json'
 
@@ -25,7 +26,7 @@ async def listening_handler(
     request: Request,
     count: int = Query(default=8),
     sessions: SessionCaches = Depends(caches)
-) -> JSONResponse:
+) -> CurrentMusic:
     """
     Get current music listens (AKA scrobbles) and stats from ListenBrainz
     """
