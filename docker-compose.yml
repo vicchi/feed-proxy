@@ -22,11 +22,12 @@ services:
     image: shumc/imagor:latest
     networks:
       - vicchi-backend
-    ports:
-      - 8002:8000
+    expose:
+      - 80
     restart: unless-stopped
     environment:
       DEBUG: false
+      PORT: 80
       IMAGOR_UNSAFE: 0
       IMAGOR_SECRET: ${CDN_SECRET}
       IMAGOR_SIGNER_TYPE: sha256

@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     site_host: str
     site_url: HttpUrl
     site_contact: EmailStr
-    preload_cache: bool
     environment: str
 
     trakt_base_url: HttpUrl

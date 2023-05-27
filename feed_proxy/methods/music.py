@@ -21,7 +21,6 @@ def current_music(
     request: Request,
     count: int,
     sessions: SessionCaches,
-    preload: bool = False
 ) -> CurrentMusic:
     """
     Get current music listening from ListenBrainz/MusicBrainz/Discogs
@@ -43,22 +42,20 @@ def current_music(
                         image_url = coverart_image(
                             mbid=caa_mbid,
                             request=request,
-                            sessions=sessions,
-                            preload=preload
+                            sessions=sessions
                         )
                     if 'release_mbid' in meta['mbid_mapping']:
                         track_url = f"{settings.musicbrainz_url}/release/{meta['mbid_mapping']['release_mbid']}"
+                    elif 'recording_mbid' in meta['mbid_mapping']:
+                        track_url = f"{settings.musicbrainz_url}/recording/{meta['mbid_mapping']['recording_mbid']}"
 
                 if image_url:
                     image = str(image_url)
                 else:
-                    if preload:
-                        image = None
-                    else:
-                        image = str(
-                            request.url_for('static',
-                                            path='/heroicons/24/solid/musical-note.svg')
-                        )
+                    image = str(
+                        request.url_for('static',
+                                        path='/heroicons/24/solid/musical-note.svg')
+                    )
 
                 listening.tracks.append(
                     Track(
@@ -112,20 +109,16 @@ def current_music(
                     mbid=caa_mbid,
                     request=request,
                     sessions=sessions,
-                    metadata='release-group',
-                    preload=preload
+                    metadata='release-group'
                 )
 
                 if image_url:
                     image = str(image_url)
                 else:
-                    if preload:
-                        image = None
-                    else:
-                        image = str(
-                            request.url_for('static',
-                                            path='/heroicons/24/solid/musical-note.svg')
-                        )
+                    image = str(
+                        request.url_for('static',
+                                        path='/heroicons/24/solid/musical-note.svg')
+                    )
 
                 listening.releases.append(
                     Release(
@@ -278,7 +271,6 @@ def coverart_image(
     mbid: str,
     request: Request,
     sessions: SessionCaches,
-    preload: bool,
     metadata: str = 'release',
 ) -> URL:
     """
@@ -310,10 +302,7 @@ def coverart_image(
             image_url = signed_cdn_url(URL(image_url).replace(scheme='https'))
 
         else:
-            if preload:
-                image_url = None
-            else:
-                image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
+            image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
 
         return image_url
 
