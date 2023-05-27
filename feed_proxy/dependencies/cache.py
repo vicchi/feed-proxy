@@ -2,12 +2,17 @@
 Feed Proxy API: dependencies package; cache module
 """
 
+import base64
 from dataclasses import dataclass
 import datetime
+from functools import lru_cache
+import hashlib
+import hmac
 
 import humanfriendly
 from requests.adapters import HTTPAdapter
 from requests_cache import CachedSession, SQLiteCache
+from starlette.datastructures import URL
 from urllib3.util.retry import Retry
 
 from feed_proxy.common.settings import get_settings
@@ -99,9 +104,25 @@ caches.weather = CachedSession(
 caches.weather.mount('https://', HTTPAdapter(max_retries=retries))
 
 
+@lru_cache
 def sessions() -> SessionCaches:
     """
     Get and return the cached sessions
     """
 
     return caches
+
+
+def signed_cdn_url(url: URL) -> URL:
+    """
+    Format and sign an image CDN URL
+    """
+
+    key = bytes(settings.cdn_secret, 'ascii')
+    path = f'{settings.cdn_image_height}x{settings.cdn_image_width}/{str(url)}'
+    raw = bytes(bytes(path, 'ascii'))
+    hashed = hmac.new(key, raw, hashlib.sha256)
+    signature = base64.b64encode(hashed.digest()).decode()
+    signed_path = f"{signature[:settings.cdn_hash_size].replace('+', '-').replace('/', '_')}/{path}"
+    url = f'{settings.cdn_base_url}/{signed_path}'
+    return URL(url)

@@ -18,6 +18,32 @@ services:
       - ./gunicorn.conf.py:/service/gunicorn.conf.py
       - ./data-stores:/service/data-stores
   
+  image-cdn:
+    image: shumc/imagor:latest
+    networks:
+      - vicchi-backend
+    ports:
+      - 8002:8000
+    restart: unless-stopped
+    environment:
+      DEBUG: false
+      IMAGOR_UNSAFE: 0
+      IMAGOR_SECRET: ${CDN_SECRET}
+      IMAGOR_SIGNER_TYPE: sha256
+      IMAGOR_SIGNER_TRUNCATE: ${CDN_HASH_SIZE}
+      FILE_LOADER_BASE_DIR: /mnt/data
+      FILE_STORAGE_BASE_DIR: /mnt/data
+      FILE_RESULT_STORAGE_BASE_DIR: /mnt/data/result
+    volumes:
+      - ./data-stores/cdn:/mnt/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.image-cdn.rule=Host(`${CDN_HOST:?CDN host not defined}`)
+      - traefik.http.routers.image-cdn.entrypoints=websecure
+      - traefik.http.routers.image-cdn.tls.certresolver=reverse-proxy-http
+      - traefik.http.routers.image-cdn.tls.options=proxy-default@file
+      - traefik.http.routers.image-cdn.middlewares=secHeaders@file
+
 networks:
     vicchi-backend:
       external: true

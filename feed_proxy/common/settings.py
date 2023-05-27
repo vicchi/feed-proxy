@@ -2,6 +2,7 @@
 Feed Proxy API: common package; .env settings module
 """
 
+from functools import lru_cache
 from pathlib import Path
 
 import dotenv
@@ -93,6 +94,13 @@ class Settings(BaseSettings):
     cache_weather: Path
 
     static_path: Path
+    cdn_base_url: HttpUrl
+    cdn_path: Path
+    cdn_secret: str
+    cdn_hash_type: str
+    cdn_hash_size: int
+    cdn_image_height: int
+    cdn_image_width: int
 
     feed_api_version: str
 
@@ -104,7 +112,8 @@ class Settings(BaseSettings):
         env_file = dotenv.find_dotenv()
 
 
-def get_settings():
+@lru_cache
+def get_settings() -> Settings:
     """
     Find and return the settings in the current .env
     """

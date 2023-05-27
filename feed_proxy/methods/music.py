@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
-from feed_proxy.dependencies.cache import SessionCaches
+from feed_proxy.dependencies.cache import SessionCaches, signed_cdn_url
 
 logger = logging.getLogger('gunicorn.error')
 
@@ -177,7 +177,7 @@ def discogs_artist_image(discogsid: str, request: Request, sessions: SessionCach
                         break
 
         if image_url:
-            image_url = URL(image_url).replace(scheme='https')
+            image_url = signed_cdn_url(URL(image_url).replace(scheme='https'))
         else:
             image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
 
@@ -315,7 +315,8 @@ def coverart_image(
                         break
 
         if image_url:
-            image_url = URL(image_url).replace(scheme='https')
+            image_url = signed_cdn_url(URL(image_url).replace(scheme='https'))
+
         else:
             if preload:
                 image_url = None

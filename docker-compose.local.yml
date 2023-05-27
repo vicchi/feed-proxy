@@ -8,6 +8,15 @@ services:
     labels:
       - traefik.enable=false
       
+  image-cdn:
+    extends:
+      file: docker-compose.yml
+      service: image-cdn
+    ports:
+      - 8002:8000
+    labels:
+      - traefik.enable=false
+
 networks:
   vicchi-backend:
     external: true

@@ -3,12 +3,15 @@ Feed Proxy API: methods package; weather module
 """
 
 from http import HTTPStatus
+import logging
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches
+
+logger = logging.getLogger('gunicorn.error')
 
 WEATHER_CODES = {
     0: {
@@ -138,10 +141,6 @@ def current_weather(
 
     settings = get_settings()
 
-    headers = {
-        'Token': settings.listenbrainz_api_token,
-        'Accept': 'application/json'
-    }
     params = {
         'latitude': lat,
         'longitude': lng,
@@ -149,7 +148,9 @@ def current_weather(
     }
 
     url = f'{settings.openmeteo_api_url}/forecast'
-    rsp = sessions.weather.get(url=url, headers=headers, params=params, timeout=10)
+    rsp = sessions.weather.get(url=url, params=params, timeout=settings.api_timeout)
+    logger.debug('%s: %s', url, rsp.status_code)
+
     if rsp.status_code != HTTPStatus.OK:
         details = rsp.json() if rsp.text else {}
         return JSONResponse(
