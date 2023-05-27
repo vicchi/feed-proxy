@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     cache_weather: Path
 
     static_path: Path
+    cdn_path: Path
 
     feed_api_version: str
 

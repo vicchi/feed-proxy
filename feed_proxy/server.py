@@ -16,6 +16,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from feed_proxy.common.middleware import RouteLoggerMiddleware, TransactionTimeMiddleware
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import sessions
+from feed_proxy.dependencies.cdn import get_cdn
 from feed_proxy.methods.music import current_music
 from feed_proxy.routers.routes import router
 
@@ -39,7 +40,7 @@ async def lifespan_handler(_app: FastAPI) -> None:
     preload = settings.preload_cache
     if preload:
         logger.info('lifespan: pre-loading music cache')
-        current_music(request=None, count=8, sessions=sessions(), preload=preload)
+        current_music(request=None, count=8, sessions=sessions(), cdn=get_cdn(), preload=preload)
     logger.info('lifespan: initialised ...')
     yield
     logger.info('lifespan: shutting down')
@@ -56,6 +57,7 @@ api.add_middleware(ProxyHeadersMiddleware, trusted_hosts='*')
 
 api.include_router(router)
 api.mount('/static', StaticFiles(directory=settings.static_path), name='static')
+api.mount('/cdn', StaticFiles(directory=settings.cdn_path), name='cdn')
 
 
 @api.get('/ping')

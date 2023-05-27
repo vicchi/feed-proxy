@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches, sessions as caches
+from feed_proxy.dependencies.cdn import CdnIsh, get_cdn
 from feed_proxy.methods.music import current_music
 from feed_proxy.methods.weather import current_weather
 
@@ -24,13 +25,14 @@ router = APIRouter(prefix=f'/{settings.feed_api_version}')
 async def listening_handler(
     request: Request,
     count: int = Query(default=8),
-    sessions: SessionCaches = Depends(caches)
+    sessions: SessionCaches = Depends(caches),
+    cdn: CdnIsh = Depends(get_cdn)
 ) -> JSONResponse:
     """
     Get current music listens (AKA scrobbles) and stats from ListenBrainz
     """
 
-    return current_music(request=request, count=count, sessions=sessions)
+    return current_music(request=request, count=count, sessions=sessions, cdn=cdn)
 
 
 @router.get('/weather')

@@ -5,14 +5,17 @@ Feed Proxy API: methods package; music module
 from http import HTTPStatus
 import logging
 import os
+from pathlib import Path
 
 from fastapi import Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
+import requests
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches
+from feed_proxy.dependencies.cdn import CdnIsh
 
 logger = logging.getLogger('gunicorn.error')
 
@@ -21,6 +24,7 @@ def current_music(
     request: Request,
     count: int,
     sessions: SessionCaches,
+    cdn: CdnIsh,
     preload: bool = False
 ) -> JSONResponse:
     """
@@ -48,6 +52,7 @@ def current_music(
                             mbid=caa_mbid,
                             request=request,
                             sessions=sessions,
+                            cdn=cdn,
                             preload=preload
                         )
                     if 'release_mbid' in meta['mbid_mapping']:
@@ -116,6 +121,7 @@ def current_music(
                     mbid=caa_mbid,
                     request=request,
                     sessions=sessions,
+                    cdn=cdn,
                     metadata='release-group',
                     preload=preload
                 )
@@ -162,28 +168,29 @@ def discogs_artist_image(discogsid: str, request: Request, sessions: SessionCach
     rsp = sessions.images.get(url=url, headers=headers, timeout=settings.api_timeout)
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        body = rsp.json()
-        image_url = None
-        if 'images' in body:
-            for image in body['images']:
-                if image['type'] == 'primary':
-                    if 'uri150' in image:
-                        image_url = image['uri150']
-                        break
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-                    if 'uri' in image:
-                        image_url = image['uri']
-                        break
+    body = rsp.json()
+    image_url = None
+    if 'images' in body:
+        for image in body['images']:
+            if image['type'] == 'primary':
+                if 'uri150' in image:
+                    image_url = image['uri150']
+                    break
 
-        if image_url:
-            image_url = URL(image_url).replace(scheme='https')
-        else:
-            image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
+                if 'uri' in image:
+                    image_url = image['uri']
+                    break
 
-        return image_url
+    if image_url:
+        image_url = URL(image_url).replace(scheme='https')
+    else:
+        image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return image_url
 
 
 def listenbrainz_artist_stats(sessions: SessionCaches, count: int, period: str = 'week') -> dict:
@@ -203,10 +210,11 @@ def listenbrainz_artist_stats(sessions: SessionCaches, count: int, period: str =
     rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=settings.api_timeout)
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        return rsp.json()
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return rsp.json()
 
 
 def listenbrainz_listens(sessions: SessionCaches, count: int) -> dict:
@@ -230,10 +238,11 @@ def listenbrainz_listens(sessions: SessionCaches, count: int) -> dict:
     )
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        return rsp.json()
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return rsp.json()
 
 
 def listenbrainz_release_stats(sessions: SessionCaches, count: int, period: str = 'week') -> dict:
@@ -253,10 +262,11 @@ def listenbrainz_release_stats(sessions: SessionCaches, count: int, period: str 
     rsp = sessions.stats.get(url=url, headers=headers, params=params, timeout=settings.api_timeout)
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        return rsp.json()
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return rsp.json()
 
 
 def musicbrainz_artist(
@@ -276,16 +286,18 @@ def musicbrainz_artist(
     rsp = sessions.artists.get(url=url, params=params, timeout=settings.api_timeout)
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        return rsp.json()
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return rsp.json()
 
 
 def coverart_image(
     mbid: str,
     request: Request,
     sessions: SessionCaches,
+    cdn: CdnIsh,
     preload: bool,
     metadata: str = 'release',
 ) -> URL:
@@ -294,34 +306,78 @@ def coverart_image(
     """
 
     settings = get_settings()
+
+    cdn_path = settings.cdn_path.absolute() / 'coverartarchive' / f'{metadata}'
+    cdn_file_glob = f'{mbid}.*'
+    logger.debug('CDN path: %s/%s', cdn_path, cdn_file_glob)
+
+    if not preload:
+        image_url = cdn.get(f'/coverartarchive/{metadata}', mbid, request)
+        if image_url:
+            return image_url
+        # logger.debug('got CDN URL: %s', image_url)
+        # candidates = list(cdn_path.glob(cdn_file_glob))
+        # if candidates:
+        #     logger.debug('%s found', candidates)
+
+        #     cdn_url = f'/coverartarchive/{metadata}/{candidates[0].name}'
+        #     logger.debug('CDN url: %s', cdn_url)
+        #     image_url = request.url_for('cdn', path=cdn_url)
+        #     return image_url
+
+        # logger.debug('no candidates found')
+
     url = f'{settings.coverart_api_url}/{metadata}/{mbid}'
     rsp = sessions.images.get(url=url, timeout=settings.api_timeout)
     logger.debug('%s: %s', url, rsp.status_code)
 
-    if rsp.status_code == HTTPStatus.OK:
-        body = rsp.json()
-        image_url = None
-        if 'images' in body:
-            for image in body['images']:
-                if image['front'] or (
-                    not image['front'] and not image['back'] and image['approved']
-                ):
-                    if 'thumbnails' in image and 'small' in image['thumbnails']:
-                        image_url = image['thumbnails']['small']
-                        break
+    if rsp.status_code != HTTPStatus.OK:
+        details = rsp.json() if rsp.text else {}
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
-                    if 'image' in image:
-                        image_url = image['image']
-                        break
+    body = rsp.json()
+    image_url = None
+    if 'images' in body:
+        for image in body['images']:
+            if image['front'] or (not image['front'] and not image['back'] and image['approved']):
+                if 'thumbnails' in image and 'small' in image['thumbnails']:
+                    image_url = image['thumbnails']['small']
+                    break
 
-        if image_url:
-            image_url = URL(image_url).replace(scheme='https')
+                if 'image' in image:
+                    image_url = image['image']
+                    break
+
+    if image_url:
+        image_url = URL(image_url).replace(scheme='https')
+        logger.debug('image URL: %s', image_url)
+
+        if not preload:
+            if not candidates:
+                cdnfile = Path(image_url.path).name
+                cdnfile = Path(cdnfile).with_stem(mbid)
+                cdndest = settings.cdn_path.absolute() / 'coverartarchive' / f'{metadata}' / cdnfile
+                cdndir = cdndest.parent
+                logger.debug('destination path: %s', cdndest)
+                logger.debug('destination dir: %s', cdndir)
+
+                cdndir.mkdir(parents=True, exist_ok=True)
+
+                rsp = requests.get(image_url, timeout=settings.api_timeout, stream=True)
+                logger.debug('%s: %s', url, rsp.status_code)
+                if rsp.status_code != HTTPStatus.OK:
+                    details = rsp.json() if rsp.text else {}
+                    raise HTTPException(status_code=rsp.status_code, detail=details)
+
+                with open(cdndest, 'wb') as ofh:
+                    for chunk in rsp.iter_content(chunk_size=1048576):
+                        ofh.write(chunk)
+
+                logger.debug('wrote %s', cdndest)
+    else:
+        if preload:
+            image_url = None
         else:
-            if preload:
-                image_url = None
-            else:
-                image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
+            image_url = request.url_for('static', path='/heroicons/24/solid/musical-note.svg')
 
-        return image_url
-
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return image_url
