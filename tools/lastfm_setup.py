@@ -4,6 +4,7 @@ Feed Proxy tools: Get your Last.fm OAuth token
 
 import hashlib
 import logging
+from typing import Any, Mapping
 
 import requests
 from starlette.applications import Starlette
@@ -60,17 +61,17 @@ async def authorise(request: Request) -> HTMLResponse:
         'Accept': 'application/json',
     }
 
-    data = {
+    params = {
         'method': settings.lastfm_session_method,
         'token': token,
         'api_key': settings.lastfm_api_key,
         'format': 'json',
     }
-    signature = sign_params(data, settings.lastfm_secret)
+    signature = sign_params(params, settings.lastfm_secret)
 
-    data['api_sig'] = signature
+    params['api_sig'] = signature
 
-    rsp = requests.get(url=settings.lastfm_api_url, headers=headers, params=data, timeout=10)
+    rsp = requests.get(url=settings.lastfm_api_url, headers=headers, params=params, timeout=10)
     if rsp.status_code != 200:
         body = f"""
         {STYLE}
@@ -79,8 +80,8 @@ async def authorise(request: Request) -> HTMLResponse:
         """
 
     else:
-        data = rsp.json()
-        session = data['session']
+        data: Mapping[Any, Any] = rsp.json()
+        session: Mapping[Any, Any] = data['session']
         body = f"""
         {STYLE}
         <h1>Your Last.fm API Oauth Token</h1>

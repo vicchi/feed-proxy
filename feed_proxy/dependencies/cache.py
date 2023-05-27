@@ -25,11 +25,11 @@ class SessionCaches:
     Categorised remote API session caches
     """
 
-    listens: CachedSession = None
-    stats: CachedSession = None
-    images: CachedSession = None
-    artists: CachedSession = None
-    weather: CachedSession = None
+    listens: CachedSession
+    stats: CachedSession
+    images: CachedSession
+    artists: CachedSession
+    weather: CachedSession
 
 
 STATUSES = [500, 502, 503, 504]
@@ -45,10 +45,8 @@ retries = Retry(
     backoff_factor=settings.api_backoff,
     status_forcelist=STATUSES
 )
-caches = SessionCaches()
-
-caches.listens = CachedSession(
-    settings.cache_listens,
+listens = CachedSession(
+    settings.cache_listens.as_posix(),
     backend=SQLiteCache(db_path=settings.cache_listens.absolute()),
     urls_expire_after={
         '*': datetime.timedelta(
@@ -57,30 +55,30 @@ caches.listens = CachedSession(
     },
     headers=DEFAULT_HEADERS
 )
-caches.listens.mount('https://', HTTPAdapter(max_retries=retries))
+listens.mount('https://', HTTPAdapter(max_retries=retries))
 
-caches.stats = CachedSession(
-    settings.cache_stats,
+stats = CachedSession(
+    settings.cache_stats.as_posix(),
     backend=SQLiteCache(db_path=settings.cache_stats.absolute()),
     urls_expire_after={
         '*': datetime.timedelta(seconds=humanfriendly.parse_timespan(settings.cache_stats_expiry))
     },
     headers=DEFAULT_HEADERS
 )
-caches.stats.mount('https://', HTTPAdapter(max_retries=retries))
+stats.mount('https://', HTTPAdapter(max_retries=retries))
 
-caches.images = CachedSession(
-    settings.cache_images,
+images = CachedSession(
+    settings.cache_images.as_posix(),
     backend=SQLiteCache(db_path=settings.cache_images.absolute()),
     urls_expire_after={
         '*': datetime.timedelta(seconds=humanfriendly.parse_timespan(settings.cache_images_expiry))
     },
     headers=DEFAULT_HEADERS
 )
-caches.images.mount('https://', HTTPAdapter(max_retries=retries))
+images.mount('https://', HTTPAdapter(max_retries=retries))
 
-caches.artists = CachedSession(
-    settings.cache_artists,
+artists = CachedSession(
+    settings.cache_artists.as_posix(),
     backend=SQLiteCache(db_path=settings.cache_artists.absolute()),
     urls_expire_after={
         '*': datetime.timedelta(
@@ -89,10 +87,10 @@ caches.artists = CachedSession(
     },
     headers=DEFAULT_HEADERS
 )
-caches.artists.mount('https://', HTTPAdapter(max_retries=retries))
+artists.mount('https://', HTTPAdapter(max_retries=retries))
 
-caches.weather = CachedSession(
-    settings.cache_weather,
+weather = CachedSession(
+    settings.cache_weather.as_posix(),
     backend=SQLiteCache(db_path=settings.cache_weather.absolute()),
     urls_expire_after={
         '*': datetime.timedelta(
@@ -101,7 +99,9 @@ caches.weather = CachedSession(
     },
     headers=DEFAULT_HEADERS
 )
-caches.weather.mount('https://', HTTPAdapter(max_retries=retries))
+weather.mount('https://', HTTPAdapter(max_retries=retries))
+
+caches = SessionCaches(listens, stats, images, artists, weather)
 
 
 @lru_cache
@@ -124,5 +124,4 @@ def signed_cdn_url(url: URL) -> URL:
     hashed = hmac.new(key, raw, hashlib.sha256)
     signature = base64.b64encode(hashed.digest()).decode()
     signed_path = f"{signature[:settings.cdn_hash_size].replace('+', '-').replace('/', '_')}/{path}"
-    url = f'{settings.cdn_base_url}/{signed_path}'
-    return URL(url)
+    return URL(f'{settings.cdn_base_url}/{signed_path}')

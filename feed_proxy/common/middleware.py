@@ -44,8 +44,8 @@ class RouteLoggerMiddleware:    # pylint: disable=too-few-public-methods
         *,
         route_logger: Optional[logging.Logger] = None,
         level: Optional[int] = None,
-        skip_routes: List[str] = None,
-        skip_regexes: List[str] = None
+        skip_routes: Optional[List[str]] = None,
+        skip_regexes: Optional[List[str]] = None
     ) -> None:
         self._app = app
         self._logger = route_logger if route_logger else logging.getLogger('gunicorn.error')

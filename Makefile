@@ -50,7 +50,7 @@ help: ## Show this help message
 # 	$(MAKE) _lint_dockerfile -e BUILD_DOCKERFILE="${FEEDPROXY_DOCKERFILE}"
 
 .PHONY: lint
-lint: lint-pylint lint-flake8 lint-docker	## Run all linters on the code base
+lint: lint-pylint lint-flake8 lint-mypy lint-docker	## Run all linters on the code base
 
 .PHONY: lint-pylint
 lint-pylint:	## Run pylint on the code base
@@ -59,6 +59,10 @@ lint-pylint:	## Run pylint on the code base
 .PHONY: lint-flake8
 lint-flake8:	## Run flake8 on the code base
 	flake8 -j 4 feed_proxy tools *.py
+
+.PHONY: lint-mypy
+lint-mypy:	## Run flake8 on the code base
+	mypy feed_proxy tools *.py
 
 .PHONY: lint-docker
 lint-docker: lint-compose lint-dockerfiles ## Lint all Docker related files

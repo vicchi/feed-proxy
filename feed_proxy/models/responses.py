@@ -2,7 +2,7 @@
 Feed Proxy API: models package; responses module
 """
 
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, HttpUrl
 
 
@@ -44,6 +44,6 @@ class CurrentMusic(BaseModel):
     All current music stats response
     """
 
-    tracks: Optional[List[Track]] = []
-    artists: Optional[List[Artist]] = []
-    releases: Optional[List[Release]] = []
+    tracks: List[Track] = []
+    artists: List[Artist] = []
+    releases: List[Release] = []

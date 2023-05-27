@@ -53,7 +53,7 @@ async def authorise(request: Request) -> HTMLResponse:
     url = URL(f'{settings.foursq_base_url}{settings.foursq_token_url}')
     url = url.include_query_params(**params)
 
-    rsp = requests.get(url=url, headers=headers, timeout=10)
+    rsp = requests.get(url=str(url), headers=headers, timeout=10)
     if rsp.status_code != 200:
         body = f"""
         {STYLE}
