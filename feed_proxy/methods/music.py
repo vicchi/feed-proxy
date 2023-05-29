@@ -5,9 +5,11 @@ Feed Proxy API: methods package; music module
 from http import HTTPStatus
 import logging
 import os
+from typing import Optional
 
 from fastapi import Request
 from fastapi.exceptions import HTTPException
+from pydantic import ValidationError
 from starlette.datastructures import URL
 
 from feed_proxy.common.settings import get_settings
@@ -57,19 +59,26 @@ def current_music(
                                         path='/heroicons/24/solid/musical-note.svg')
                     )
 
-                listening.tracks.append(
-                    Track(
-                        artist=meta['artist_name'],
-                        track=meta['track_name'],
-                        url=track_url,
-                        image=image
+                try:
+                    listening.tracks.append(
+                        Track(
+                            artist=meta['artist_name'],
+                            track=meta['track_name'],
+                            url=track_url,
+                            image=image
+                        )
                     )
-                )
+                except ValidationError:
+                    pass
+
+                if len(listening.tracks) >= count:
+                    break
 
     artists = listenbrainz_artist_stats(sessions, count)
     if 'payload' in artists and 'artists' in artists['payload']:
         for artist in artists['payload']['artists']:
             image_url = None
+            artist_url = None
             artist_meta = {}
             discogs_id = None
             if 'artist_mbid' in artist and artist['artist_mbid']:
@@ -86,23 +95,34 @@ def current_music(
                             )
                             break
 
+                artist_url = f"{settings.musicbrainz_url}/artist/{artist['artist_mbid']}"
+
             if image_url:
                 image = str(image_url)
             else:
                 image = str(request.url_for('static', path='/heroicons/24/solid/musical-note.svg'))
 
-            listening.artists.append(
-                Artist(
-                    name=artist['artist_name'],
-                    count=artist['listen_count'],
-                    url=track_url,
-                    image=image
+            try:
+                listening.artists.append(
+                    Artist(
+                        name=artist['artist_name'],
+                        count=artist['listen_count'],
+                        url=artist_url,
+                        image=image
+                    )
                 )
-            )
+            except ValidationError:
+                pass
+
+            if len(listening.artists) >= count:
+                break
 
     releases = listenbrainz_release_stats(sessions, count)
     if 'payload' in releases and 'release_groups' in releases['payload']:
         for release in releases['payload']['release_groups']:
+            image_url = None
+            groups_url = None
+
             if 'release_group_mbid' in release and release['release_group_mbid']:
                 caa_mbid = release['release_group_mbid']
                 image_url = coverart_image(
@@ -111,6 +131,7 @@ def current_music(
                     sessions=sessions,
                     metadata='release-group'
                 )
+                groups_url = f"{settings.musicbrainz_url}/release-group/{release['release_group_mbid']}"
 
                 if image_url:
                     image = str(image_url)
@@ -120,14 +141,20 @@ def current_music(
                                         path='/heroicons/24/solid/musical-note.svg')
                     )
 
-                listening.releases.append(
-                    Release(
-                        artist=release['artist_name'],
-                        release=release['release_group_name'],
-                        url=track_url,
-                        image=image
+                try:
+                    listening.releases.append(
+                        Release(
+                            artist=release['artist_name'],
+                            release=release['release_group_name'],
+                            url=groups_url,
+                            image=image
+                        )
                     )
-                )
+                except ValidationError:
+                    pass
+
+                if len(listening.releases) >= count:
+                    break
 
     return listening
 
@@ -181,7 +208,7 @@ def listenbrainz_artist_stats(sessions: SessionCaches, count: int, period: str =
         'Token': settings.listenbrainz_api_token
     }
     params = {
-        'count': count,
+        'count': count * 2,
         'range': period
     }
     url = f'{settings.listenbrainz_api_url}/stats/user/{settings.listenbrainz_api_user}/artists'
@@ -204,7 +231,7 @@ def listenbrainz_listens(sessions: SessionCaches, count: int) -> dict:
         'Token': settings.listenbrainz_api_token
     }
     params = {
-        'count': count
+        'count': count * 2
     }
     url = f'{settings.listenbrainz_api_url}/user/{settings.listenbrainz_api_user}/listens'
     rsp = sessions.listens.get(
@@ -231,7 +258,7 @@ def listenbrainz_release_stats(sessions: SessionCaches, count: int, period: str 
         'Token': settings.listenbrainz_api_token
     }
     params = {
-        'count': count,
+        'count': count * 2,
         'range': period
     }
     url = f'{settings.listenbrainz_api_url}/stats/user/{settings.listenbrainz_api_user}/release-groups'
@@ -272,7 +299,7 @@ def coverart_image(
     request: Request,
     sessions: SessionCaches,
     metadata: str = 'release',
-) -> URL:
+) -> Optional[URL]:
     """
     Get release covert art image from CoverArtArchive
     """
@@ -306,4 +333,4 @@ def coverart_image(
 
         return image_url
 
-    raise HTTPException(status_code=rsp.status_code, detail=rsp.json())
+    return None

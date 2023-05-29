@@ -1,6 +1,7 @@
 .direnv
 .env
 __pycache__/
+.mypy_cache/
 node_modules/
 run/
 data-stores/cache/**
