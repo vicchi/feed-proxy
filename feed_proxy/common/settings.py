@@ -88,9 +88,10 @@ class Settings(BaseSettings):
     cache_images: Path
     cache_artists_expiry: str
     cache_artists: Path
-
     cache_weather_expiry: str
     cache_weather: Path
+    cache_checkins_expiry: str
+    cache_checkins: Path
 
     static_path: Path
     cdn_base_url: HttpUrl

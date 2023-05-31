@@ -30,6 +30,7 @@ class SessionCaches:
     images: CachedSession
     artists: CachedSession
     weather: CachedSession
+    checkins: CachedSession
 
 
 STATUSES = [500, 502, 503, 504]
@@ -101,7 +102,19 @@ weather = CachedSession(
 )
 weather.mount('https://', HTTPAdapter(max_retries=retries))
 
-caches = SessionCaches(listens, stats, images, artists, weather)
+checkins = CachedSession(
+    settings.cache_checkins.as_posix(),
+    backend=SQLiteCache(db_path=settings.cache_checkins.absolute()),
+    urls_expire_after={
+        '*': datetime.timedelta(
+            seconds=humanfriendly.parse_timespan(settings.cache_checkins_expiry)
+        )
+    },
+    headers=DEFAULT_HEADERS
+)
+checkins.mount('https://', HTTPAdapter(max_retries=retries))
+
+caches = SessionCaches(listens, stats, images, artists, weather, checkins)
 
 
 @lru_cache

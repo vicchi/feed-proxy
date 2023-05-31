@@ -9,9 +9,10 @@ from fastapi.responses import JSONResponse
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches, sessions as caches
+from feed_proxy.methods.checkins import current_checkin
 from feed_proxy.methods.music import current_music
 from feed_proxy.methods.weather import current_weather
-from feed_proxy.models.responses import CurrentMusic
+from feed_proxy.models.responses import CurrentMusic, CurrentWeather
 
 STATUSLOG_JSON = 'statuslog.json'
 
@@ -19,6 +20,18 @@ logger = logging.getLogger('gunicorn.error')
 
 settings = get_settings()
 router = APIRouter(prefix=f'/{settings.feed_api_version}')
+
+
+@router.get('/checkin')
+async def checkin_handler(
+    request: Request,
+    sessions: SessionCaches = Depends(caches)
+) -> JSONResponse:
+    """
+    Get the current checkin from Swarm/Foursquare
+    """
+
+    return current_checkin(request, sessions)
 
 
 @router.get('/listening')
@@ -44,7 +57,7 @@ async def weather_handler(
                        ge=-90.0,
                        le=90.0),
     sessions: SessionCaches = Depends(caches)
-) -> JSONResponse:
+) -> CurrentWeather:
     """
     Get current weather from OpenMeteo
     """

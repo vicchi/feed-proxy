@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches
+from feed_proxy.models.responses import CurrentWeather
 
 logger = logging.getLogger('gunicorn.error')
 
@@ -134,7 +135,7 @@ def current_weather(
     lng: float,
     lat: float,
     sessions: SessionCaches
-) -> JSONResponse:
+) -> CurrentWeather:
     """
     Get current weather from OpenMeteo
     """
@@ -166,11 +167,12 @@ def current_weather(
     code = body['current_weather']['weathercode']
     icon = WEATHER_CODES[code]['icon'].format(day_night=day_night)
 
-    content = {
-        'temp': body['current_weather']['temperature'],
-        'icon': str(request.url_for('static',
-                                    path=f'/weather-icons/fill/svg/{icon}.svg')),
-        'descr': WEATHER_CODES[code]['descr']
-    }
+    weather = CurrentWeather(
+        temp=body['current_weather']['temperature'],
+        icon=str(request.url_for('static',
+                                 path=f'/weather-icons/fill/svg/{icon}.svg')),
+        descr=WEATHER_CODES[code]['descr']
+    )
+    return weather
 
-    return JSONResponse(status_code=HTTPStatus.OK.value, content=content)
+    # return JSONResponse(status_code=HTTPStatus.OK.value, content=content)

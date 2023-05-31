@@ -47,3 +47,13 @@ class CurrentMusic(BaseModel):
     tracks: List[Track] = []
     artists: List[Artist] = []
     releases: List[Release] = []
+
+
+class CurrentWeather(BaseModel):
+    """
+    Current weather response
+    """
+
+    temp: float
+    icon: HttpUrl
+    descr: str
