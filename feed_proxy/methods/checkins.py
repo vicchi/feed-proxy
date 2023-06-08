@@ -37,8 +37,7 @@ def current_checkin(request: Request, sessions: SessionCaches) -> JSONResponse:
     if rsp.status_code != HTTPStatus.OK:
         details = rsp.json() if rsp.text else {}
         return JSONResponse(
-            status_code=rsp.status_code,
-            content={
+            status_code=rsp.status_code, content={
                 'code': rsp.status_code,
                 'details': details
             }
@@ -52,8 +51,8 @@ def current_checkin(request: Request, sessions: SessionCaches) -> JSONResponse:
     size = '32'
     icon_url = f"{icon['prefix']}{size}{icon['suffix']}"
     location = venue['location']
-    location.pop('labeledLatLngs')
-    location.pop('formattedAddress')
+    location.pop('labeledLatLngs', None)
+    location.pop('formattedAddress', None)
     checkin = {
         'timestamp': str(datetime.datetime.fromtimestamp(item['createdAt'])),
         'name': venue['name'],
@@ -63,14 +62,10 @@ def current_checkin(request: Request, sessions: SessionCaches) -> JSONResponse:
 
     coords = venue['location']
     weather = current_weather(
-        request=request,
-        lng=coords['lng'],
-        lat=coords['lat'],
-        sessions=sessions
+        request=request, lng=coords['lng'], lat=coords['lat'], sessions=sessions
     )
     return JSONResponse(
-        status_code=HTTPStatus.OK.value,
-        content={
+        status_code=HTTPStatus.OK.value, content={
             'checkin': checkin,
             'weather': weather.dict()
         }

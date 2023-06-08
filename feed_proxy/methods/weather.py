@@ -6,7 +6,7 @@ from http import HTTPStatus
 import logging
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.exceptions import HTTPException
 
 from feed_proxy.common.settings import get_settings
 from feed_proxy.dependencies.cache import SessionCaches
@@ -154,13 +154,7 @@ def current_weather(
 
     if rsp.status_code != HTTPStatus.OK:
         details = rsp.json() if rsp.text else {}
-        return JSONResponse(
-            status_code=rsp.status_code,
-            content={
-                'code': rsp.status_code,
-                'details': details
-            }
-        )
+        raise HTTPException(status_code=rsp.status_code, detail=details)
 
     body = rsp.json()
     day_night = 'day' if body['current_weather']['is_day'] else 'night'
@@ -174,5 +168,3 @@ def current_weather(
         descr=WEATHER_CODES[code]['descr']
     )
     return weather
-
-    # return JSONResponse(status_code=HTTPStatus.OK.value, content=content)
